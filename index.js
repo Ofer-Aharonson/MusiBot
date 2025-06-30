@@ -25,6 +25,56 @@ const history = new Map();
 // Loop mode per guild: 'off' | 'song' | 'queue'
 const loopMode = new Map();
 
+const stats = {
+    guilds: 0,
+    songsPlayed: 0,
+    uptime: '0s',
+    commandsUsed: 0
+};
+const statsPath = './stats.json';
+function saveStats() {
+    fs.writeFile(statsPath, JSON.stringify(stats, null, 2), () => {});
+}
+function updateUptime() {
+    const seconds = Math.floor((Date.now() - startTime) / 1000);
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    stats.uptime = `${h}h ${m}m ${s}s`;
+    saveStats();
+}
+let startTime = Date.now();
+setInterval(updateUptime, 10000);
+
+client.once(Events.ClientReady, async () => {
+    console.log('🎵 MusiBot is ready to play music!');
+    await registerCommands();
+    console.log('✅ All slash commands are up to date and ready to use.');
+    console.log('Invite this bot to your server and use /play to get started!');
+    stats.guilds = client.guilds.cache.size;
+    saveStats();
+});
+
+client.on(Events.GuildCreate, () => {
+    stats.guilds++;
+    saveStats();
+});
+client.on(Events.GuildDelete, () => {
+    stats.guilds = Math.max(0, stats.guilds - 1);
+    saveStats();
+});
+
+const globalHistoryPath = './history.json';
+function saveGlobalHistory(song) {
+    let data = { history: [] };
+    try {
+        data = JSON.parse(fs.readFileSync(globalHistoryPath, 'utf8'));
+    } catch {}
+    data.history.unshift({ title: song.title, url: song.url, time: new Date().toISOString() });
+    if (data.history.length > 20) data.history = data.history.slice(0, 20);
+    fs.writeFile(globalHistoryPath, JSON.stringify(data, null, 2), () => {});
+}
+
 async function playSong(guildId, channel, song) {
     let serverQueue = queue.get(guildId);
     if (!serverQueue) return;
@@ -95,6 +145,9 @@ async function playSong(guildId, channel, song) {
         playNext(guildId, channel);
     });
     channel.send(`Now playing: **${song.title}**`);
+    stats.songsPlayed++;
+    saveStats();
+    saveGlobalHistory(song);
 }
 
 function playNext(guildId, channel) {
@@ -131,6 +184,8 @@ function playNext(guildId, channel) {
 
 client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isChatInputCommand()) return;
+    stats.commandsUsed++;
+    saveStats();
     const { commandName } = interaction;
     const guildId = interaction.guildId;
     const member = interaction.member;
@@ -337,6 +392,7 @@ client.on(Events.InteractionCreate, async interaction => {
             '• `/willitblend` — that is the question.... (plays blender sound)',
             '• `/history` — Show the last 10 played songs',
             '• `/loop <song|queue|off>` — Loop the current song, queue, or turn looping off',
+            '• `/shuffle` — Shuffle the current queue',
             '• `/help` — Show this help message',
             '',
             '_Tip: Use tab-complete or `/` in Discord to see all available commands!_'
@@ -389,6 +445,21 @@ client.on(Events.InteractionCreate, async interaction => {
         else if (mode === 'queue') msg = 'Looping the queue.';
         await interaction.reply({ content: msg, flags: 64 });
         return;
+    } else if (commandName === 'shuffle') {
+        const serverQueue = queue.get(guildId);
+        if (!serverQueue || serverQueue.songs.length < 2) {
+            await interaction.reply({ content: 'Not enough songs in the queue to shuffle.', flags: 64 });
+            return;
+        }
+        // Shuffle all except the first song (currently playing)
+        const [current, ...rest] = serverQueue.songs;
+        for (let i = rest.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [rest[i], rest[j]] = [rest[j], rest[i]];
+        }
+        serverQueue.songs = [current, ...rest];
+        await interaction.reply({ content: 'Queue shuffled! 🔀', flags: 64 });
+        return;
     }
 });
 
@@ -413,7 +484,8 @@ async function registerCommands() {
             { name: 'off', value: 'off' },
             { name: 'song', value: 'song' },
             { name: 'queue', value: 'queue' }
-        ))
+        )),
+        new SlashCommandBuilder().setName('shuffle').setDescription('Shuffle the current queue'),
     ].map(cmd => cmd.toJSON());
     try {
         await rest.put(
@@ -425,13 +497,6 @@ async function registerCommands() {
         console.error('Failed to register slash commands:', error);
     }
 }
-
-client.once(Events.ClientReady, async () => {
-    console.log('🎵 MusiBot is ready to play music!');
-    await registerCommands();
-    console.log('✅ All slash commands are up to date and ready to use.');
-    console.log('Invite this bot to your server and use /play to get started!');
-});
 
 client.on('error', (err) => {
     console.error('Client error:', err);

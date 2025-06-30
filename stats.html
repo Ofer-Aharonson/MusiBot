@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MusiBot Stats</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #18181b; color: #fff; margin: 0; padding: 0; }
+    .container { max-width: 500px; margin: 40px auto; background: #23232a; border-radius: 12px; box-shadow: 0 4px 24px #0006; padding: 2em; }
+    h1 { text-align: center; font-size: 2.2em; margin-bottom: 0.5em; }
+    .stat { font-size: 1.2em; margin: 1em 0; padding: 1em; background: #29293a; border-radius: 8px; display: flex; align-items: center; }
+    .stat span { margin-right: 0.7em; font-size: 1.5em; }
+    .footer { text-align: center; margin-top: 2em; color: #aaa; font-size: 0.95em; }
+    .history { margin-top: 2em; }
+    .history h2 { font-size: 1.5em; margin-bottom: 0.5em; }
+    .history-list { list-style: none; padding: 0; }
+    .history-list li { background: #29293a; margin: 0.5em 0; padding: 0.8em; border-radius: 8px; display: flex; justify-content: space-between; }
+    .history-list a { color: #1db954; text-decoration: none; }
+    .history-list time { font-size: 0.9em; color: #bbb; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎵 MusiBot Statistics</h1>
+    <div class="stat"><span>👥</span> Servers: <b id="guilds">?</b></div>
+    <div class="stat"><span>🎶</span> Songs played: <b id="songs">?</b></div>
+    <div class="stat"><span>🕒</span> Uptime: <b id="uptime">?</b></div>
+    <div class="stat"><span>💡</span> Commands used: <b id="commands">?</b></div>
+    <div class="history">
+      <h2>🕒 Recent Songs</h2>
+      <ul class="history-list" id="history"></ul>
+    </div>
+    <div class="footer">MusiBot &copy; 2025</div>
+  </div>
+  <script>
+    fetch('stats.json')
+      .then(r => r.json())
+      .then(stats => {
+        document.getElementById('guilds').textContent = stats.guilds || 0;
+        document.getElementById('songs').textContent = stats.songsPlayed || 0;
+        document.getElementById('uptime').textContent = stats.uptime || '?';
+        document.getElementById('commands').textContent = stats.commandsUsed || 0;
+      });
+    fetch('history.json')
+      .then(r => r.json())
+      .then(data => {
+        const list = document.getElementById('history');
+        if (!data.history || !data.history.length) {
+          list.innerHTML = '<li>No songs played yet.</li>';
+        } else {
+          list.innerHTML = data.history.map(s =>
+            `<li><a href="${s.url}" target="_blank">${s.title}</a><time>${new Date(s.time).toLocaleString()}</time></li>`
+          ).join('');
+        }
+      });
+  </script>
+</body>
+</html>
