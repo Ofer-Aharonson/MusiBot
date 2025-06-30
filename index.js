@@ -106,20 +106,20 @@ client.on(Events.InteractionCreate, async interaction => {
 
     // Enhanced error handling for user mistakes
     if (["play","skip","stop"].includes(commandName) && !voiceChannel) {
-        await interaction.reply({ content: 'You must join a voice channel first!', ephemeral: true });
+        await interaction.reply({ content: 'You must join a voice channel first!', flags: 64 });
         return;
     }
 
     if (commandName === 'play') {
         const query = interaction.options.getString('query');
         if (!query || query.trim().length === 0) {
-            await interaction.reply({ content: 'You must provide a search query.', ephemeral: true });
+            await interaction.reply({ content: 'You must provide a search query.', flags: 64 });
             return;
         }
         await interaction.deferReply();
         let results;
         try {
-            results = await scdl.search({ limit: 5, query });
+            results = await scdl.search({ limit: 10, query });
             if (!results.collection.length) throw new Error('No results');
         } catch (e) {
             await interaction.editReply('No results found on SoundCloud.');
@@ -190,7 +190,7 @@ client.on(Events.InteractionCreate, async interaction => {
     } else if (commandName === 'skip') {
         const serverQueue = queue.get(guildId);
         if (!serverQueue || !serverQueue.player) {
-            await interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+            await interaction.reply({ content: 'Nothing is playing.', flags: 64 });
             return;
         }
         serverQueue.player.stop();
@@ -213,26 +213,26 @@ client.on(Events.InteractionCreate, async interaction => {
     } else if (commandName === 'pause') {
         const serverQueue = queue.get(guildId);
         if (!serverQueue || !serverQueue.player) {
-            await interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+            await interaction.reply({ content: 'Nothing is playing.', flags: 64 });
             return;
         }
         const success = serverQueue.player.pause();
         if (success) {
             await interaction.reply('Playback paused.');
         } else {
-            await interaction.reply({ content: 'Failed to pause playback.', ephemeral: true });
+            await interaction.reply({ content: 'Failed to pause playback.', flags: 64 });
         }
     } else if (commandName === 'resume') {
         const serverQueue = queue.get(guildId);
         if (!serverQueue || !serverQueue.player) {
-            await interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+            await interaction.reply({ content: 'Nothing is playing.', flags: 64 });
             return;
         }
         const success = serverQueue.player.unpause();
         if (success) {
             await interaction.reply('Playback resumed.');
         } else {
-            await interaction.reply({ content: 'Failed to resume playback.', ephemeral: true });
+            await interaction.reply({ content: 'Failed to resume playback.', flags: 64 });
         }
     } else if (commandName === 'nowplaying') {
         const serverQueue = queue.get(guildId);
@@ -245,12 +245,12 @@ client.on(Events.InteractionCreate, async interaction => {
     } else if (commandName === 'volume') {
         const serverQueue = queue.get(guildId);
         if (!serverQueue || !serverQueue.player) {
-            await interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+            await interaction.reply({ content: 'Nothing is playing.', flags: 64 });
             return;
         }
         const vol = interaction.options.getNumber('level');
         if (vol === null || isNaN(vol) || vol < 1 || vol > 200) {
-            await interaction.reply({ content: 'Volume must be between 1 and 200.', ephemeral: true });
+            await interaction.reply({ content: 'Volume must be between 1 and 200.', flags: 64 });
             return;
         }
         // Convert 1-200 to 0.0-2.0 (Discord default is 1.0)
@@ -261,7 +261,7 @@ client.on(Events.InteractionCreate, async interaction => {
     } else if (commandName === 'seek') {
         const serverQueue = queue.get(guildId);
         if (!serverQueue || !serverQueue.player || !serverQueue.songs.length) {
-            await interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+            await interaction.reply({ content: 'Nothing is playing.', flags: 64 });
             return;
         }
         const ts = interaction.options.getString('timestamp');
@@ -272,7 +272,7 @@ client.on(Events.InteractionCreate, async interaction => {
             const [min, sec] = ts.split(':').map(Number);
             seconds = min * 60 + sec;
         } else {
-            await interaction.reply({ content: 'Invalid timestamp format. Use seconds or mm:ss.', ephemeral: true });
+            await interaction.reply({ content: 'Invalid timestamp format. Use seconds or mm:ss.', flags: 64 });
             return;
         }
         const song = serverQueue.songs[0];
@@ -307,7 +307,7 @@ client.on(Events.InteractionCreate, async interaction => {
             '',
             '_Tip: Use tab-complete or `/` in Discord to see all available commands!_'
         ].join('\n');
-        await interaction.reply({ content: helpText, ephemeral: true });
+        await interaction.reply({ content: helpText, flags: 64 }); // 64 = EPHEMERAL
         return;
     } else if (commandName === 'willitblend') {
         await interaction.reply('that is the question....');
