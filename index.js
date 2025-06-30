@@ -20,10 +20,21 @@ const client = new Client({
 
 // Music queue per guild
 const queue = new Map();
+// Song history per guild (last 10 songs)
+const history = new Map();
 
 async function playSong(guildId, channel, song) {
     let serverQueue = queue.get(guildId);
     if (!serverQueue) return;
+
+    // Track song in history
+    let guildHistory = history.get(guildId) || [];
+    // Only push if not the same as last played
+    if (!guildHistory.length || guildHistory[0].url !== song.url) {
+        guildHistory.unshift({ title: song.title, url: song.url });
+        if (guildHistory.length > 10) guildHistory = guildHistory.slice(0, 10);
+        history.set(guildId, guildHistory);
+    }
 
     // Join voice channel if not already
     let connection = getVoiceConnection(guildId);
@@ -303,6 +314,7 @@ client.on(Events.InteractionCreate, async interaction => {
             '• `/volume <1-200>` — Set playback volume',
             '• `/seek <seconds|mm:ss>` — Seek to a timestamp in the current song (MP3 only)',
             '• `/willitblend` — that is the question.... (plays blender sound)',
+            '• `/history` — Show the last 10 played songs',
             '• `/help` — Show this help message',
             '',
             '_Tip: Use tab-complete or `/` in Discord to see all available commands!_'
@@ -331,7 +343,16 @@ client.on(Events.InteractionCreate, async interaction => {
         // Optionally disconnect after sound
         setTimeout(() => {
             if (connection) connection.destroy();
-        }, 8000); // 8 seconds, adjust to match sound length
+        }, 7000); // 7 seconds, adjust to match sound length
+        return;
+    } else if (commandName === 'history') {
+        const guildHistory = history.get(guildId);
+        if (!guildHistory || guildHistory.length === 0) {
+            await interaction.reply({ content: 'No songs have been played yet.', flags: 64 });
+            return;
+        }
+        const lines = guildHistory.map((s, i) => `${i + 1}. [${s.title}](${s.url})`).join('\n');
+        await interaction.reply({ content: `**Last 10 played songs:**\n${lines}`, flags: 64 });
         return;
     }
 });
@@ -351,7 +372,8 @@ async function registerCommands() {
         new SlashCommandBuilder().setName('volume').setDescription('Set playback volume').addNumberOption(opt => opt.setName('level').setDescription('Volume (1-200)').setRequired(true)),
         new SlashCommandBuilder().setName('seek').setDescription('Seek to a timestamp in the current song').addStringOption(opt => opt.setName('timestamp').setDescription('Time (seconds or mm:ss)').setRequired(true)),
         new SlashCommandBuilder().setName('help').setDescription('Show a summary of all commands'),
-        new SlashCommandBuilder().setName('willitblend').setDescription('that is the question.... (plays blender sound)')
+        new SlashCommandBuilder().setName('willitblend').setDescription('that is the question.... (plays blender sound)'),
+        new SlashCommandBuilder().setName('history').setDescription('Show the last 10 played songs')
     ].map(cmd => cmd.toJSON());
     try {
         await rest.put(
