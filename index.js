@@ -22,6 +22,8 @@ const client = new Client({
 const queue = new Map();
 // Song history per guild (last 10 songs)
 const history = new Map();
+// Loop mode per guild: 'off' | 'song' | 'queue'
+const loopMode = new Map();
 
 async function playSong(guildId, channel, song) {
     let serverQueue = queue.get(guildId);
@@ -85,7 +87,6 @@ async function playSong(guildId, channel, song) {
     }
 
     player.on(AudioPlayerStatus.Idle, () => {
-        serverQueue.songs.shift();
         playNext(guildId, channel);
     });
     player.on('error', error => {
@@ -105,7 +106,27 @@ function playNext(guildId, channel) {
         clearDisconnect(guildId);
         return;
     }
-    playSong(guildId, channel, serverQueue.songs[0]);
+    const mode = loopMode.get(guildId) || 'off';
+    if (mode === 'song') {
+        // Replay the current song
+        playSong(guildId, channel, serverQueue.songs[0]);
+    } else if (mode === 'queue') {
+        // Move current song to end, play next
+        const finished = serverQueue.songs.shift();
+        serverQueue.songs.push(finished);
+        playSong(guildId, channel, serverQueue.songs[0]);
+    } else {
+        // Normal: remove current song, play next
+        serverQueue.songs.shift();
+        if (serverQueue.songs.length > 0) {
+            playSong(guildId, channel, serverQueue.songs[0]);
+        } else {
+            queue.delete(guildId);
+            const connection = getVoiceConnection(guildId);
+            if (connection) connection.destroy();
+            clearDisconnect(guildId);
+        }
+    }
 }
 
 client.on(Events.InteractionCreate, async interaction => {
@@ -315,6 +336,7 @@ client.on(Events.InteractionCreate, async interaction => {
             '• `/seek <seconds|mm:ss>` — Seek to a timestamp in the current song (MP3 only)',
             '• `/willitblend` — that is the question.... (plays blender sound)',
             '• `/history` — Show the last 10 played songs',
+            '• `/loop <song|queue|off>` — Loop the current song, queue, or turn looping off',
             '• `/help` — Show this help message',
             '',
             '_Tip: Use tab-complete or `/` in Discord to see all available commands!_'
@@ -354,6 +376,19 @@ client.on(Events.InteractionCreate, async interaction => {
         const lines = guildHistory.map((s, i) => `${i + 1}. [${s.title}](${s.url})`).join('\n');
         await interaction.reply({ content: `**Last 10 played songs:**\n${lines}`, flags: 64 });
         return;
+    } else if (commandName === 'loop') {
+        const mode = interaction.options.getString('mode');
+        if (!['off', 'song', 'queue'].includes(mode)) {
+            await interaction.reply({ content: 'Invalid mode. Use song, queue, or off.', flags: 64 });
+            return;
+        }
+        loopMode.set(guildId, mode);
+        let msg = '';
+        if (mode === 'off') msg = 'Looping is now off.';
+        else if (mode === 'song') msg = 'Looping current song.';
+        else if (mode === 'queue') msg = 'Looping the queue.';
+        await interaction.reply({ content: msg, flags: 64 });
+        return;
     }
 });
 
@@ -373,7 +408,12 @@ async function registerCommands() {
         new SlashCommandBuilder().setName('seek').setDescription('Seek to a timestamp in the current song').addStringOption(opt => opt.setName('timestamp').setDescription('Time (seconds or mm:ss)').setRequired(true)),
         new SlashCommandBuilder().setName('help').setDescription('Show a summary of all commands'),
         new SlashCommandBuilder().setName('willitblend').setDescription('that is the question.... (plays blender sound)'),
-        new SlashCommandBuilder().setName('history').setDescription('Show the last 10 played songs')
+        new SlashCommandBuilder().setName('history').setDescription('Show the last 10 played songs'),
+        new SlashCommandBuilder().setName('loop').setDescription('Loop the current song, queue, or turn looping off').addStringOption(opt => opt.setName('mode').setDescription('song, queue, or off').setRequired(true).addChoices(
+            { name: 'off', value: 'off' },
+            { name: 'song', value: 'song' },
+            { name: 'queue', value: 'queue' }
+        ))
     ].map(cmd => cmd.toJSON());
     try {
         await rest.put(
