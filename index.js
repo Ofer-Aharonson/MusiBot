@@ -37,6 +37,7 @@ async function playSong(guildId, channel, song) {
 
     const player = createAudioPlayer();
     connection.subscribe(player);
+    clearDisconnect(guildId);
 
     try {
         let stream;
@@ -90,6 +91,7 @@ function playNext(guildId, channel) {
         queue.delete(guildId);
         const connection = getVoiceConnection(guildId);
         if (connection) connection.destroy();
+        clearDisconnect(guildId);
         return;
     }
     playSong(guildId, channel, serverQueue.songs[0]);
@@ -115,30 +117,76 @@ client.on(Events.InteractionCreate, async interaction => {
             return;
         }
         await interaction.deferReply();
-        let songInfo;
+        let results;
         try {
-            const results = await scdl.search({ limit: 1, query });
+            results = await scdl.search({ limit: 5, query });
             if (!results.collection.length) throw new Error('No results');
-            songInfo = {
-                title: results.collection[0].title,
-                url: results.collection[0].permalink_url
-            };
         } catch (e) {
             await interaction.editReply('No results found on SoundCloud.');
             return;
         }
-        let serverQueue = queue.get(guildId);
-        if (!serverQueue) {
-            serverQueue = { songs: [], channel: voiceChannel };
-            queue.set(guildId, serverQueue);
+        // If only one result, play immediately as before
+        if (results.collection.length === 1) {
+            const songInfo = {
+                title: results.collection[0].title,
+                url: results.collection[0].permalink_url
+            };
+            let serverQueue = queue.get(guildId);
+            if (!serverQueue) {
+                serverQueue = { songs: [], channel: voiceChannel };
+                queue.set(guildId, serverQueue);
+            }
+            serverQueue.songs.push(songInfo);
+            if (serverQueue.songs.length === 1) {
+                playSong(guildId, voiceChannel, songInfo);
+                await interaction.editReply(`Queued and playing: **${songInfo.title}**`);
+            } else {
+                await interaction.editReply(`Queued: **${songInfo.title}**`);
+            }
+            return;
         }
-        serverQueue.songs.push(songInfo);
-        if (serverQueue.songs.length === 1) {
-            playSong(guildId, voiceChannel, songInfo);
-            await interaction.editReply(`Queued and playing: **${songInfo.title}**`);
-        } else {
-            await interaction.editReply(`Queued: **${songInfo.title}**`);
+        // Multiple results: let user pick
+        const options = results.collection.map((track, i) => ({
+            label: track.title.length > 100 ? track.title.slice(0, 97) + '...' : track.title,
+            value: String(i)
+        }));
+        await interaction.editReply({
+            content: 'Select a song to play:',
+            components: [{
+                type: 1, // ACTION_ROW
+                components: [{
+                    type: 3, // SELECT_MENU
+                    custom_id: 'play_select',
+                    placeholder: 'Choose a song...',
+                    min_values: 1,
+                    max_values: 1,
+                    options
+                }]
+            }]
+        });
+        // Wait for selection
+        const filter = i => i.customId === 'play_select' && i.user.id === interaction.user.id;
+        try {
+            const select = await interaction.channel.awaitMessageComponent({ filter, time: 15000 });
+            const idx = parseInt(select.values[0], 10);
+            const picked = results.collection[idx];
+            const songInfo = { title: picked.title, url: picked.permalink_url };
+            let serverQueue = queue.get(guildId);
+            if (!serverQueue) {
+                serverQueue = { songs: [], channel: voiceChannel };
+                queue.set(guildId, serverQueue);
+            }
+            serverQueue.songs.push(songInfo);
+            if (serverQueue.songs.length === 1) {
+                playSong(guildId, voiceChannel, songInfo);
+                await select.update({ content: `Queued and playing: **${songInfo.title}**`, components: [] });
+            } else {
+                await select.update({ content: `Queued: **${songInfo.title}**`, components: [] });
+            }
+        } catch (e) {
+            await interaction.editReply({ content: 'No selection made. Cancelling.', components: [] });
         }
+        return;
     } else if (commandName === 'skip') {
         const serverQueue = queue.get(guildId);
         if (!serverQueue || !serverQueue.player) {
@@ -201,12 +249,12 @@ client.on(Events.InteractionCreate, async interaction => {
             return;
         }
         const vol = interaction.options.getNumber('level');
-        if (vol === null || isNaN(vol) || vol < 1 || vol > 100) {
-            await interaction.reply({ content: 'Volume must be between 1 and 100.', ephemeral: true });
+        if (vol === null || isNaN(vol) || vol < 1 || vol > 200) {
+            await interaction.reply({ content: 'Volume must be between 1 and 200.', ephemeral: true });
             return;
         }
-        // Convert 1-100 to 0.0-2.0 (Discord default is 1.0)
-        const normVol = vol / 50;
+        // Convert 1-200 to 0.0-2.0 (Discord default is 1.0)
+        const normVol = vol / 100;
         if (serverQueue.resource && serverQueue.resource.volume) serverQueue.resource.volume.setVolume(normVol);
         serverQueue.volume = normVol;
         await interaction.reply(`Volume set to ${vol}`);
@@ -242,6 +290,49 @@ client.on(Events.InteractionCreate, async interaction => {
             await interaction.editReply('Seek failed. Only some tracks support seeking (MP3 only).');
         }
         return;
+    } else if (commandName === 'help') {
+        const helpText = [
+            '**MusiBot Commands:**',
+            '• `/play <query>` — Play a song from SoundCloud by search or link',
+            '• `/skip` — Skip the current song',
+            '• `/stop` — Stop playback and clear the queue',
+            '• `/queue` — Show the current song queue',
+            '• `/pause` — Pause the current song',
+            '• `/resume` — Resume playback',
+            '• `/nowplaying` — Show the currently playing song',
+            '• `/volume <1-200>` — Set playback volume',
+            '• `/seek <seconds|mm:ss>` — Seek to a timestamp in the current song (MP3 only)',
+            '• `/willitblend` — that is the question.... (plays blender sound)',
+            '• `/help` — Show this help message',
+            '',
+            '_Tip: Use tab-complete or `/` in Discord to see all available commands!_'
+        ].join('\n');
+        await interaction.reply({ content: helpText, ephemeral: true });
+        return;
+    } else if (commandName === 'willitblend') {
+        await interaction.reply('that is the question....');
+        if (!voiceChannel) return;
+        let connection = getVoiceConnection(guildId);
+        if (!connection) {
+            connection = joinVoiceChannel({
+                channelId: voiceChannel.id,
+                guildId: guildId,
+                adapterCreator: voiceChannel.guild.voiceAdapterCreator
+            });
+        }
+        const player = createAudioPlayer();
+        connection.subscribe(player);
+        // Play blender sound (local file)
+        const resource = createAudioResource('./blender.mp3');
+        player.play(resource);
+        player.on(AudioPlayerStatus.Idle, () => {
+            player.stop();
+        });
+        // Optionally disconnect after sound
+        setTimeout(() => {
+            if (connection) connection.destroy();
+        }, 8000); // 8 seconds, adjust to match sound length
+        return;
     }
 });
 
@@ -257,8 +348,10 @@ async function registerCommands() {
         new SlashCommandBuilder().setName('pause').setDescription('Pause the current song'),
         new SlashCommandBuilder().setName('resume').setDescription('Resume playback'),
         new SlashCommandBuilder().setName('nowplaying').setDescription('Show the currently playing song'),
-        new SlashCommandBuilder().setName('volume').setDescription('Set playback volume').addNumberOption(opt => opt.setName('level').setDescription('Volume (1-100)').setRequired(true)),
-        new SlashCommandBuilder().setName('seek').setDescription('Seek to a timestamp in the current song').addStringOption(opt => opt.setName('timestamp').setDescription('Time (seconds or mm:ss)').setRequired(true))
+        new SlashCommandBuilder().setName('volume').setDescription('Set playback volume').addNumberOption(opt => opt.setName('level').setDescription('Volume (1-200)').setRequired(true)),
+        new SlashCommandBuilder().setName('seek').setDescription('Seek to a timestamp in the current song').addStringOption(opt => opt.setName('timestamp').setDescription('Time (seconds or mm:ss)').setRequired(true)),
+        new SlashCommandBuilder().setName('help').setDescription('Show a summary of all commands'),
+        new SlashCommandBuilder().setName('willitblend').setDescription('that is the question.... (plays blender sound)')
     ].map(cmd => cmd.toJSON());
     try {
         await rest.put(
@@ -286,3 +379,34 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 client.login(token);
+
+// Auto-disconnect after inactivity or when everyone leaves the voice channel
+const INACTIVITY_TIMEOUT = 300_000; // 5 minutes
+const disconnectTimers = new Map();
+
+function scheduleDisconnect(guildId) {
+    clearDisconnect(guildId);
+    disconnectTimers.set(guildId, setTimeout(() => {
+        const connection = getVoiceConnection(guildId);
+        if (connection) connection.destroy();
+        queue.delete(guildId);
+    }, INACTIVITY_TIMEOUT));
+}
+
+function clearDisconnect(guildId) {
+    const timer = disconnectTimers.get(guildId);
+    if (timer) clearTimeout(timer);
+    disconnectTimers.delete(guildId);
+}
+
+client.on(Events.VoiceStateUpdate, (oldState, newState) => {
+    // Only care about bot's own channel
+    const connection = getVoiceConnection(oldState.guild.id);
+    if (!connection) return;
+    const channel = oldState.guild.channels.cache.get(connection.joinConfig.channelId);
+    if (!channel || channel.members.filter(m => !m.user.bot).size === 0) {
+        scheduleDisconnect(oldState.guild.id);
+    } else {
+        clearDisconnect(oldState.guild.id);
+    }
+});
