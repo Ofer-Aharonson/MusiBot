@@ -1,341 +1,74 @@
+// Load environment variables first
+require('dotenv').config();
 
+// Import Discord.js classes
+const { Client, GatewayIntentBits } = require('discord.js');
+const { Player } = require('discord-music-player');
 
-const {Client, GuildMember, GatewayIntentBits, SlashCommandBuilder, REST, Routes} = require('discord.js');
-const {clientId, token} = require("./token.json");
-const client = new Client({ intents: [ GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessageReactions]});
-const { Player } = require("discord-music-player");
-const player = new Player(client, 
-    {
-    leaveOnEmpty: false, // This options are optional.
+// Import configuration
+const config = require('./config');
+const logger = require('./utils/logger');
+
+// Import handlers
+const { loadCommands, registerCommands } = require('./handlers/commandHandler');
+const { loadEvents } = require('./handlers/eventHandler');
+
+// Validate environment variables
+if (!config.token || !config.clientId) {
+    logger.error('Missing required environment variables: DISCORD_TOKEN and/or CLIENT_ID');
+    logger.info('Please create a .env file based on .env.example');
+    process.exit(1);
+}
+
+// Create Discord client with necessary permissions
+const client = new Client({ 
+    intents: [ 
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.GuildMessageReactions
+    ]
 });
 
-    client.player = player
-
-
-client.on("ready", () => {
-    console.log("🎶 Gooten Toog Bot is online and kicking! 🎶");
+// Create music player instance
+const player = new Player(client, {
+    leaveOnEmpty: config.LEAVE_ON_EMPTY
 });
 
-client.login(token);
-const { RepeatMode } = require('discord-music-player');
+// Attach player to client for easy access
+client.player = player;
 
-//----------------------------------------------------------------------------------------------------
+// Load commands and events
+client.commands = loadCommands(client);
+loadEvents(client);
 
-  //----Disabled for security, no need to initiate bot from tilde commands anymore.------
-/*client.on('messageCreate', async (message) => {
-    const args = message.content.slice(settings.prefix.length).trim().split(/ +/);
-    if(!message.content.startsWith(settings.prefix) || message.author.bot) return;
+// Register commands with Discord
+registerCommands(config.token, config.clientId, client.commands);
+
+// Login to Discord
+client.login(config.token);
+
+// Graceful shutdown handler
+process.on('SIGINT', async () => {
+    logger.info('Shutting down gracefully...');
     
-  if (message.content === "!deploy") { */
-
-//----------------------------------------------------------------------------------------------------
-
-
-
-
-  const commands = [
-            {
-                name: "play",
-                description: "Plays a song from youtube",
-                options: [
-                    {
-                        name: "query",
-                        type: 3,
-                        description: "The song you want to play",
-                        required: true
-                    }
-                ]
-            },
-            {
-                name: "skip",
-                description: "Skip the current song"
-            },
-            {
-                name: "stop",
-                description: "Stop the player completely"
-            },
-            {
-                name: "end",
-                description: "Ends the current queue as a whole"
-            },
-            {
-                name: "loop",
-                description: "Loops current song"
-            },
-            {
-                name: "pause",
-                description: "Pause the current song"
-            },
-            {
-                name: "resume",
-                description: "Unpauses the current song"
-            },
-            {
-                name: "queue-loop",
-                description: "Loops the entire queue of songs"
-            },
-            {
-                name: "remove",
-                description: "Removes a song from the queue",
-                options: [
-                    {
-                        name: "number",
-                        type: 4,
-                        description: "Remove spesific song number from queue",
-                        required: true
-                    }
-                ]
-            },
-            {
-                name: "seek",
-                description: "Move to a certain second on current song",
-                options: [
-                    {
-                        name: "seconds",
-                        type: 4,
-                        description: "Goes to the spesific time in seconds of the song",
-                        required: true
-                    }
-                ]
-            },
-            {
-                name: "set-volume",
-                description: "Set the volume of the player",
-                options: [
-                    {
-                        name: "volume",
-                        type: 4,
-                        description: "Sets the volume to number mentioned",
-                        required: true
-                    }
-                ]
-            },
-
-            //disabled for now.
-            /*{
-                name: "show-queue",
-                description: "List the current queue of songs"
-            },*/
-
-            
-            {
-                name: "shuffle",
-                description: "Shuffle the queue of songs"
-            },
-            {
-                name: "stop-loop",
-                description: "Stops the looping of current queue of songs"
-            },
-        
-        ]
-        const rest = new REST().setToken(token);
-        (async () => {
-            try {
-                console.log(`Started refreshing ${commands.length} application (/) commands.`);
-                const data = await rest.put(
-                    Routes.applicationCommands(clientId),
-                    { body: commands },
-                );
-                console.log(`Successfully reloaded ${data.length} application (/) commands.`);
-            } catch (error) {
-                console.error(error);
-            }
-        })();
-
-client.on("interactionCreate", async (interaction) => {
-    if (!interaction.isCommand() || !interaction.guildId) return;
-
-    if (!(interaction.member instanceof GuildMember) || !interaction.member.voice.channel) {
-        return void interaction.reply({ content: "You are not in a voice channel!", ephemeral: true });
-        
-    }
-switch(interaction.commandName){
-    case 'play' :
-    {
-        await interaction.deferReply();
-        let queue = client.player.createQueue(interaction.guild);
-        let guildQueue = client.player.getQueue(interaction.guild);
-        await queue.join(interaction.member.voice.channel);
-        const query = interaction.options.get("query").value;
-        if (query.includes("playlist"))
-        {
-            let song = await queue.playlist(query).catch(err => {
-                console.log(err);
-                if(!guildQueue)
-                    queue.stop();
-             }
-            );
-            await interaction.editReply({content: `**Playing the song:** ${song.url}`})
-            setTimeout(() => interaction.deleteReply(), 15000);
-            break;
-        }
-
-        else
-        {
-        let song = await queue.play(query).catch(err => {
-            console.log(err);
-            if(!guildQueue)
-                queue.stop();
-            }
-         );
-         await interaction.editReply({content: `**Playing the song:** ${song.url}`})
-         setTimeout(() => interaction.deleteReply(), 15000);
-         break;
+    // Disconnect from all voice channels
+    if (client.player) {
+        const queues = client.player.getQueue();
+        if (queues) {
+            queues.stop();
         }
     }
-    case 'skip' :
-    {
-        await interaction.deferReply();
-        let guildQueue = client.player.getQueue(interaction.guild);
-        if (guildQueue === undefined) return void interaction.reply({ content: "**No song is being played!**", ephemeral: true });
-        await interaction.editReply({ content: `**Skipping the song:** ${guildQueue.nowPlaying}`});
-        guildQueue.skip();
-        setTimeout(() => interaction.deleteReply(), 15000);
-        break;
-    }
+    
+    // Destroy client
+    client.destroy();
+    logger.info('Bot shut down successfully');
+    process.exit(0);
+});
 
-    case 'stop' :
-    {
-        await interaction.deferReply();
-        let guildQueue = client.player.getQueue(interaction.guild);
-        if (guildQueue === undefined) return void interaction.reply({ content: "**No song is being played!**", ephemeral: true });
-        guildQueue.stop();
-        await interaction.editReply({content: "**Stopped the player!**"});
-        setTimeout(() => interaction.deleteReply(), 15000);
-        break;
-    } 
-    case 'set-volume' :
-    {
-        await interaction.deferReply();
-        let guildQueue = client.player.getQueue(interaction.guild);
-        if (guildQueue === undefined) return void interaction.reply({ content: "**No song is being played!**", ephemeral: true });
-        guildQueue.setVolume(interaction.options.get("volume").value);
-        await interaction.editReply({content: `**Set the volume to:** ${interaction.options.get("volume").value}`});
-        setTimeout(() => interaction.deleteReply(), 15000);
-        break;
-     } 
-    case 'end' :
-    {
-            await interaction.deferReply();
-        let guildQueue = client.player.getQueue(interaction.guild);
-        if (guildQueue === undefined) return void interaction.reply({ content: "**No song is being played!**", ephemeral: true });
-        guildQueue.stop();
-        await interaction.editReply({content: "**Ended the player!**"});
-        setTimeout(() => interaction.deleteReply(), 15000);
-        break;
-    } 
-    case 'stop-loop' :
-    {
-            await interaction.deferReply();
-        let guildQueue = client.player.getQueue(interaction.guild);
-        if (guildQueue === undefined) return void interaction.reply({ content: "**No song is being played!**", ephemeral: true });
-        guildQueue.setRepeatMode(RepeatMode.DISABLED);
-        await interaction.editReply({content: "**Stopped the looping song!**"});
-        setTimeout(() => interaction.deleteReply(), 15000);
-        break;
-    }
-    case 'loop' :
-    {
-            await interaction.deferReply();
-        let guildQueue = client.player.getQueue(interaction.guild);
-        if (guildQueue === undefined) return void interaction.reply({ content: "**No song is being played!**", ephemeral: true });
-        guildQueue.setRepeatMode(RepeatMode.SONG);
-        await interaction.editReply({content: "**Looping current song!**"});
-        setTimeout(() => interaction.deleteReply(), 15000);
-        break;
-    }  
-    case 'queue-loop' :
-    {
-            await interaction.deferReply();
-        let guildQueue = client.player.getQueue(interaction.guild);
-        if (guildQueue === undefined) return void interaction.reply({ content: "**No song is being played!**", ephemeral: true });
-        guildQueue.setRepeatMode(RepeatMode.QUEUE);
-        await interaction.editReply({content: "**Looping entire queue!**"});
-        setTimeout(() => interaction.deleteReply(), 15000);
-        break;
-    }  
-    case 'seek' :
-    {
-            await interaction.deferReply();
-        let guildQueue = client.player.getQueue(interaction.guild);
-        if (guildQueue === undefined) return void interaction.reply({ content: "**No song is being played!**", ephemeral: true });
-        guildQueue.seek(interaction.options.get("seconds").value * 1000);
-        await interaction.editReply({content: `**Seeking to:** ${interaction.options.get("seconds").value * 1000}`});
-        setTimeout(() => interaction.deleteReply(), 15000);
-        break;
-    }
-    case 'clear-queue' :
-    {
-            await interaction.deferReply();
-        let guildQueue = client.player.getQueue(interaction.guild);
-        if (guildQueue === undefined) return void interaction.reply({ content: "**No song is being played!**", ephemeral: true });
-        guildQueue.clearQueue();
-        await interaction.editReply({content: `**Clearing the queue!**`});
-        setTimeout(() => interaction.deleteReply(), 15000);
-        break;
-    }
-    case 'shuffle' :
-    {
-           await interaction.deferReply();
-        let guildQueue = client.player.getQueue(interaction.guild);
-        if (guildQueue === undefined) return void interaction.reply({ content: "**No song is being played!**", ephemeral: true });
-        guildQueue.shuffle();
-        await interaction.editReply({content: `**Everybody's shuffling... the queue.**`});
-        setTimeout(() => interaction.deleteReply(), 15000);
-        break;
-    }
-
-    //----------------------------------------------------------------------------------------------------
-
-
-    //disabled due to issue showing allocated queue per server, inputs all at once.
-
-    /* case 'show-queue' :
-    {
-            await interaction.deferReply();
-        let guildQueue = client.player.getQueue(interaction.guild);
-        if (guildQueue === undefined) return void interaction.reply({ content: "**No song is being played!**", ephemeral: true });
-        const slicedString = guildQueue.song(0, 1999);
-        await interaction.followUp({content: `**The queue is: ${slicedString}**`});
-        setTimeout(() => interaction.deleteReply(), 15000);
-        break;
-    }*/
-
-    //----------------------------------------------------------------------------------------------------
-
-
-    case 'pause' :
-    {
-            await interaction.deferReply();
-        let guildQueue = client.player.getQueue(interaction.guild);
-        if (guildQueue === undefined) return void interaction.reply({ content: "**No song is being played!**", ephemeral: true });
-        //if (guildQueue.setPaused(true)) return void interaction.reply({ content: "**Already paused this song!**", ephemeral: true });
-        guildQueue.setPaused(true);
-        await interaction.editReply({content: `**Pausing Current song!**`});
-        setTimeout(() => interaction.deleteReply(), 15000);
-        break;
-    }
-    case 'resume' :
-    {
-            await interaction.deferReply();
-        let guildQueue = client.player.getQueue(interaction.guild);
-        if (guildQueue === undefined) return void interaction.reply({ content: "**No song is being played!**", ephemeral: true });
-        //if (guildQueue.setpaused(false)) return void interaction.reply({ content: "**Song is already playing!**", ephemeral: true });
-        guildQueue.setPaused(false);
-        await interaction.editReply({content: `**Unpausing Current song!**`});
-        setTimeout(() => interaction.deleteReply(), 15000);
-        break;
-    }
-    case 'remove' :
-    {
-            await interaction.deferReply();
-        let guildQueue = client.player.getQueue(interaction.guild);
-        if (guildQueue === undefined) return void interaction.reply({ content: "**No song is being played!**", ephemeral: true });
-        guildQueue.remove(interaction.options.get("number").value);
-        await interaction.editReply({content: `**removing song number:** ${interaction.options.get("number").value} **from the list!**`});
-        setTimeout(() => interaction.deleteReply(), 15000);
-        break;
-    }
-
-
-}});
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (error) => {
+    logger.error('Unhandled promise rejection:', error);
+});
