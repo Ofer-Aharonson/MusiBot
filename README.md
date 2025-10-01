@@ -1,200 +1,159 @@
-# MusiBot 🎶
+<div align="center">
 
-A professional Discord music bot for playing YouTube songs, built with Discord.js v14 and following industry best practices.
+# 🎵 MusiBot
+
+**A modern Discord music bot built with Discord.js v14**
+
+[![Node.js](https://img.shields.io/badge/Node.js-16.9.0+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Discord.js](https://img.shields.io/badge/Discord.js-v14-5865F2?logo=discord&logoColor=white)](https://discord.js.org/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+*Play YouTube music in your Discord server with slash commands*
+
+[Features](#-features) • [Installation](#-installation) • [Commands](#-commands) • [Configuration](#-configuration)
+
+</div>
+
+---
 
 ## ✨ Features
 
-- 🎵 Play songs from YouTube (URLs or search queries)
-- 📋 Queue management (add, remove, shuffle, clear)
-- 🔁 Loop modes (song and queue)
-- ⏯️ Playback controls (pause, resume, skip, stop)
-- 🔊 Volume control (0-200)
-- ⏩ Seek to specific time in songs
-- 🎲 Shuffle queue
-- 📱 Slash commands (modern Discord UI)
+🎵 **YouTube Integration** - Play songs directly from YouTube  
+⚡ **Slash Commands** - Modern Discord UI with autocomplete  
+📋 **Queue System** - Add, remove, shuffle, and manage your playlist  
+🔁 **Loop Modes** - Loop single songs or entire queue  
+🔊 **Volume Control** - Adjust playback volume (0-200%)  
+⏩ **Seek & Skip** - Jump to any point in a song  
+�️ **Modular Architecture** - Clean, maintainable code structure  
+🔒 **Secure** - Environment variables for credentials  
 
-## 🚀 Quick Start
+## 🚀 Installation
 
 ### Prerequisites
-- Node.js (v16.9.0 or higher)
-- A Discord bot token
+- [Node.js](https://nodejs.org/) v16.9.0 or higher
+- A Discord bot token ([Get one here](https://discord.com/developers/applications))
 
-### Installation
+### Setup
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/Sunflames/MusiBot.git
-   cd MusiBot
-   ```
+```bash
+# Clone the repository
+git clone https://github.com/Ofer-Aharonson/MusiBot.git
+cd MusiBot
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+# Install dependencies
+npm install
 
-3. **Configure environment**
-   
-   Your `.env` file is already set up. If you need to change it:
-   ```env
-   DISCORD_TOKEN=your_bot_token_here
-   CLIENT_ID=your_client_id_here
-   ```
+# Configure environment variables
+cp .env.example .env
+# Edit .env with your bot token and client ID
 
-4. **Run the bot**
-   ```bash
-   npm start
-   ```
-
-## 📁 Project Structure
-
+# Start the bot
+node index.js
 ```
-MusiBot/
-├── commands/          # Individual command files
-│   ├── play.js        # Play music from YouTube
-│   ├── skip.js        # Skip current song
-│   ├── pause.js       # Pause playback
-│   ├── resume.js      # Resume playback
-│   ├── stop.js        # Stop and clear queue
-│   ├── volume.js      # Set volume
-│   ├── loop.js        # Loop current song
-│   ├── queueLoop.js   # Loop entire queue
-│   ├── stopLoop.js    # Stop looping
-│   ├── seek.js        # Seek in song
-│   ├── remove.js      # Remove song from queue
-│   ├── shuffle.js     # Shuffle queue
-│   ├── clearQueue.js  # Clear all songs
-│   └── end.js         # End queue
-├── config/            # Configuration files
-│   ├── constants.js   # Messages and settings
-│   └── index.js       # Main config loader
-├── events/            # Discord event handlers
-│   ├── ready.js       # Bot ready event
-│   └── interactionCreate.js  # Command handler
-├── handlers/          # Dynamic loaders
-│   ├── commandHandler.js  # Load commands
-│   └── eventHandler.js    # Load events
-├── utils/             # Helper functions
-│   ├── queueHelper.js # Queue utilities
-│   └── logger.js      # Logging utility
-└── index.js           # Main entry point
-```
+
+### Getting Your Bot Token
+
+1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
+2. Create a new application
+3. Go to "Bot" → Reset Token → Copy
+4. Paste into `.env` file
+5. Enable these intents: `GUILD_VOICE_STATES`, `GUILDS`
+
+
 
 ## 🎮 Commands
 
-| Command | Description |
-|---------|-------------|
-| `/play <query>` | Play a song from YouTube |
-| `/skip` | Skip the current song |
-| `/stop` | Stop playback and clear queue |
-| `/pause` | Pause the current song |
-| `/resume` | Resume playback |
-| `/set-volume <0-200>` | Set playback volume |
-| `/loop` | Loop the current song |
-| `/queue-loop` | Loop the entire queue |
-| `/stop-loop` | Disable loop mode |
-| `/seek <seconds>` | Jump to specific time |
-| `/remove <number>` | Remove song from queue |
-| `/shuffle` | Shuffle the queue |
-| `/clear-queue` | Clear all songs |
-| `/end` | End the queue |
+### Playback
+- `/play <query>` - Play a song from YouTube (URL or search)
+- `/pause` - Pause the current song
+- `/resume` - Resume playback
+- `/skip` - Skip to the next song
+- `/stop` - Stop playback and clear queue
+- `/seek <seconds>` - Jump to a specific time in the song
+
+### Queue Management
+- `/remove <position>` - Remove a song from the queue
+- `/shuffle` - Randomize queue order
+- `/clear-queue` - Remove all songs from queue
+- `/end` - End the current queue
+
+### Loop & Volume
+- `/loop` - Toggle loop for current song
+- `/queue-loop` - Toggle loop for entire queue
+- `/stop-loop` - Disable all loop modes
+- `/set-volume <0-200>` - Adjust playback volume
 
 ## 🛠️ Development
 
-### Scripts
-
-```bash
-npm start        # Run the bot
-npm run dev      # Run with auto-restart (requires nodemon)
-npm run lint     # Check code quality
-npm run lint:fix # Auto-fix linting issues
-npm run format   # Format code with Prettier
+### Project Structure
+```
+MusiBot/
+├── commands/      # 14 slash commands
+├── config/        # Configuration & constants
+├── events/        # Discord event handlers
+├── handlers/      # Dynamic command/event loaders
+├── utils/         # Helper functions & logging
+└── index.js       # Bot entry point
 ```
 
-### Adding New Commands
+### Adding Commands
 
-Create a new file in `commands/` folder:
-
-```javascript
-const { MESSAGES } = require('../config/constants');
-const { getQueueOrReply, sendTemporaryReply } = require('../utils/queueHelper');
-
+1. Create a file in `commands/yourcommand.js`:
+```js
 module.exports = {
     data: {
-        name: 'your-command',
-        description: 'Command description'
+        name: 'yourcommand',
+        description: 'Your command description'
     },
-    
     async execute(interaction, client) {
-        await interaction.deferReply();
-        
-        const guildQueue = await getQueueOrReply(interaction, client);
-        if (!guildQueue) return;
-        
-        // Your command logic here
-        
-        await sendTemporaryReply(interaction, 'Success!');
+        // Your logic here
     }
 };
 ```
 
-Restart the bot - the command will automatically load!
+2. Restart the bot - it auto-loads new commands!
 
 ## ⚙️ Configuration
 
-Edit `.env` file to customize:
+Customize your bot in `.env`:
 
 ```env
-# Discord Bot
-DISCORD_TOKEN=your_token
-CLIENT_ID=your_client_id
-
-# Bot Behavior
-MESSAGE_DELETE_TIMEOUT=15000  # Auto-delete messages after 15s
-LEAVE_ON_EMPTY=false          # Stay in voice when empty
-VOLUME_MIN=0                  # Minimum volume
-VOLUME_MAX=200                # Maximum volume
+DISCORD_TOKEN=your_bot_token_here
+CLIENT_ID=your_client_id_here
+MESSAGE_DELETE_TIMEOUT=15000
+VOLUME_MIN=0
+VOLUME_MAX=200
 ```
-
-Edit `config/constants.js` to customize messages.
 
 ## 🏗️ Architecture
 
-This bot follows modern JavaScript best practices:
-
-- ✅ **Modular Design** - Each command is a separate file
-- ✅ **DRY Principle** - No code repetition
-- ✅ **Environment Variables** - Secure configuration
-- ✅ **Error Handling** - Comprehensive try-catch blocks
-- ✅ **Logging** - Professional logging with timestamps
-- ✅ **JSDoc** - Full documentation
-- ✅ **Code Quality** - ESLint and Prettier configured
-- ✅ **Graceful Shutdown** - Proper cleanup on exit
-
-## 📝 License
-
-MIT License - see LICENSE file for details
+Built with best practices:
+- ✅ Modular design - each command is a separate file
+- ✅ Environment variables for security
+- ✅ Comprehensive error handling
+- ✅ ESLint & Prettier for code quality
+- ✅ Helper functions to reduce code duplication
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Feel free to open an issue or submit a pull request.
 
-## 📚 Documentation
+## � License
 
-- [Quick Start Guide](QUICK_START.md) - Fast setup instructions
-- [Refactor Guide](REFACTOR_GUIDE.md) - Detailed documentation
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🆘 Support
+## 🔧 Tech Stack
 
-If you encounter any issues:
-1. Check that `.env` has correct tokens
-2. Ensure all dependencies are installed: `npm install`
-3. Verify Node.js version: `node --version` (should be v16.9.0+)
-
-## 🎉 Acknowledgments
-
-- Built with [Discord.js](https://discord.js.org/)
-- Music playback powered by [discord-music-player](https://www.npmjs.com/package/discord-music-player)
+- [Discord.js](https://discord.js.org/) - Discord API wrapper
+- [discord-music-player](https://www.npmjs.com/package/discord-music-player) - Music playback
+- [dotenv](https://www.npmjs.com/package/dotenv) - Environment variables
 
 ---
 
-Made with ❤️ by [Sunflames](https://github.com/Sunflames)
+<div align="center">
+
+**[⬆ Back to Top](#-musibot)**
+
+Made with ❤️ for Discord communities
+
+</div>
