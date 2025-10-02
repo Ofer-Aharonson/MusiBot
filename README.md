@@ -1,21 +1,24 @@
 # 🎵 MusiBot v3.0.0
 
-A powerful Discord music bot with SoundCloud integration, queue management, and advanced playback controls.
+A powerful Discord music bot with **SoundCloud** integration, featuring queue management, loop modes, and advanced playback controls.
 
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D16.0.0-blue.svg)
 ![Discord.js](https://img.shields.io/badge/discord.js-v14-blue.svg)
+![SoundCloud](https://img.shields.io/badge/SoundCloud-free%20API-orange.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
+
+> 🎧 **Why SoundCloud Only?** This bot intentionally uses SoundCloud exclusively for legal compliance, reliability, and to avoid platform restrictions. [Learn more](#-why-soundcloud-only)
 
 ## ✨ Features
 
-### 🎧 Playback Controls
-- **Play from SoundCloud** - Search and play tracks with interactive button selection
+### 🎧 SoundCloud Playback
+- **Smart Search** - Find tracks by name or artist with 10 interactive results
+- **Free API** - No authentication required, no rate limits
+- **High Quality** - Direct streaming from SoundCloud servers
+- **Independent Artists** - Support underground and indie music
 - **Queue System** - Automatic queue management with auto-advance
-- **Pause/Resume** - Control playback at any time
-- **Skip** - Jump to the next track in queue
-- **Stop** - Stop playback and disconnect
-- **Seek** - Jump to specific time in a track
+- **Playback Controls** - Pause, resume, skip, stop, and seek
 
 ### 📋 Queue Management
 - **Add to Queue** - Songs automatically queue when playing
@@ -79,6 +82,7 @@ A powerful Discord music bot with SoundCloud integration, queue management, and 
 - Node.js v16.0.0 or higher
 - Discord Bot Token
 - Discord Application with Bot enabled
+- **That's it!** No SoundCloud API keys needed - completely free and automatic!
 
 ### Setup
 
@@ -178,10 +182,12 @@ MusiBot/
    - **Queue Loop**: Cycles through entire queue
 
 ### SoundCloud Integration
-- Automatic client ID retrieval
-- Free tier streaming
-- 10-song search results with button selection
-- High-quality audio playback
+- **Zero Configuration** - Automatic client ID retrieval
+- **100% Free** - No API keys, no rate limits, no costs
+- **Interactive Selection** - 10-song search results with buttons
+- **High Quality** - Direct HQ audio streaming
+- **Legal & Safe** - Full ToS compliance
+- **Independent Music** - Support underground artists
 
 ### Command Registration
 - Commands automatically register on bot startup
@@ -285,25 +291,81 @@ This project is licensed under the MIT License.
 - [@discordjs/voice](https://github.com/discordjs/voice) - Voice connection handling
 - [Express](https://expressjs.com/) - Web dashboard
 
+## ❓ Frequently Asked Questions
+
+### Can you add YouTube support?
+**No.** YouTube actively blocks bots, requires constant cookie updates, and violates their Terms of Service for automated playback. It's not reliable or legal for Discord music bots.
+
+### What about Spotify?
+**Spotify requires a paid API license** for commercial use and doesn't provide audio streams. Any bot claiming to "support Spotify" is actually just using Spotify for metadata and streaming from YouTube (which has the problems mentioned above).
+
+### Why is SoundCloud better?
+- ✅ **Free API** with no authentication
+- ✅ **Legal** for Discord bots
+- ✅ **Reliable** - won't break with updates
+- ✅ **Direct streaming** - no workarounds needed
+- ✅ **Rich content** - 300M+ tracks including exclusive mixes and unreleased music
+
+### Can I self-host this?
+**Yes!** That's the whole point. This bot is designed to be self-hosted on your own server, giving you full control and avoiding the issues public music bots face.
+
+### Does it cost money to run?
+**No API costs.** You only need:
+- A computer/VPS to run the bot (can be your own PC)
+- A Discord bot token (free)
+- SoundCloud works completely free via `getFreeClientID()`
+
 ## 📞 Support
 
 If you encounter any issues or have questions:
 1. Check the [Troubleshooting](#-troubleshooting) section
 2. Review [Discord.js Documentation](https://discord.js.org/)
-3. Open an issue on GitHub
+3. Read the [FAQ](#-frequently-asked-questions)
+4. Open an issue on GitHub
 
-## 🎉 Features Coming Soon
+## � Why SoundCloud Only?
 
-- YouTube support
-- Spotify integration
-- Playlist management
-- Now playing embeds
-- Search history
-- Favorites system
-- Multi-language support
+MusiBot is **intentionally designed as a SoundCloud-exclusive music bot** for important reasons:
+
+### ✅ Legal & Compliance
+- **No Licensing Issues** - SoundCloud's API is free and bot-friendly
+- **Terms of Service** - Complies with platform guidelines
+- **Commercial Use** - Safe for public Discord servers
+- **No Copyright Violations** - All content is legally streamed
+
+### ✅ Technical Reliability
+- **YouTube Problems** - Constant bot detection, cookie requirements, frequent API changes
+- **Spotify Limitations** - Requires paid API license, no audio streaming
+- **Deezer Restrictions** - Commercial license required
+- **Free API Access** - SoundCloud provides stable, free access via `getFreeClientID()`
+
+### ✅ Best User Experience
+- **No Authentication** - Works immediately without setup hassles
+- **Stable Service** - Won't break with platform updates
+- **Rich Content** - Huge library of independent and mainstream artists
+- **Fast Streaming** - Direct audio streams without proxy layers
+
+### 🎵 Content Library
+SoundCloud offers:
+- **300+ million tracks** from independent artists
+- Remixes, DJ sets, and unreleased music
+- Electronic, hip-hop, indie, and more
+- Content you won't find on other platforms
+
+## 🚀 Planned Features
+
+- **Now playing embeds** with track artwork
+- **Playlist support** for SoundCloud playlists
+- **Search history** and favorites system
+- **User profiles** with listening stats
+- **Queue display** with upcoming tracks
+- **Lyrics integration** for supported tracks
+- **Multi-language** command support
 
 ---
 
 **Made with ❤️ by Ofer-Aharonson**
+
+*Built for reliability, designed for independence, powered by SoundCloud.*
 
 *Star ⭐ this repository if you find it helpful!*
