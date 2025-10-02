@@ -1,5 +1,4 @@
 // Queue Loop Command - Toggle loop for entire queue
-const { MessageFlags } = require('discord.js');
 
 module.exports = {
     data: {
@@ -14,18 +13,22 @@ module.exports = {
             
             // Check if there's an active queue
             if (!queue) {
-                return await interaction.reply({
+                const reply = await interaction.reply({
                     content: '❌ No queue found!',
-                    flags: MessageFlags.Ephemeral
+                    fetchReply: true
                 });
+                setTimeout(() => reply.delete().catch(() => {}), 10000);
+                return;
             }
             
             // Check if queue has songs
             if (!queue.tracks || queue.tracks.length === 0) {
-                return await interaction.reply({
+                const reply = await interaction.reply({
                     content: '❌ Queue is empty!',
-                    flags: MessageFlags.Ephemeral
+                    fetchReply: true
                 });
+                setTimeout(() => reply.delete().catch(() => {}), 10000);
+                return;
             }
             
             // Toggle queue loop mode
@@ -36,19 +39,21 @@ module.exports = {
                 queue.loop = false;
             }
             
-            await interaction.reply({
+            const reply = await interaction.reply({
                 content: queue.queueLoop 
                     ? '🔁 Queue loop enabled!' 
                     : '➡️ Queue loop disabled!',
-                flags: MessageFlags.Ephemeral
+                fetchReply: true
             });
+            setTimeout(() => reply.delete().catch(() => {}), 10000);
             
         } catch (error) {
             console.error('Queue loop command error:', error);
-            await interaction.reply({
+            const reply = await interaction.reply({
                 content: '❌ Error: ' + error.message,
-                flags: MessageFlags.Ephemeral
+                fetchReply: true
             });
+            setTimeout(() => reply.delete().catch(() => {}), 10000);
         }
     }
 };

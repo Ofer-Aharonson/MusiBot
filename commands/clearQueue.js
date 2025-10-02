@@ -1,5 +1,4 @@
 // Clear Queue Command - Remove all songs from the queue
-const { MessageFlags } = require('discord.js');
 
 module.exports = {
     data: {
@@ -14,10 +13,12 @@ module.exports = {
             
             // Check if queue exists
             if (!queue || !queue.tracks || queue.tracks.length === 0) {
-                return await interaction.reply({
+                const reply = await interaction.reply({
                     content: '❌ The queue is already empty!',
-                    flags: MessageFlags.Ephemeral
+                    fetchReply: true
                 });
+                setTimeout(() => reply.delete().catch(() => {}), 10000);
+                return;
             }
             
             // Store count before clearing
@@ -26,17 +27,19 @@ module.exports = {
             // Clear the queue
             queue.tracks = [];
             
-            await interaction.reply({
+            const reply = await interaction.reply({
                 content: `🗑️ Cleared ${count} song(s) from the queue!`,
-                flags: MessageFlags.Ephemeral
+                fetchReply: true
             });
+            setTimeout(() => reply.delete().catch(() => {}), 10000);
             
         } catch (error) {
             console.error('Clear queue command error:', error);
-            await interaction.reply({
+            const reply = await interaction.reply({
                 content: '❌ Error: ' + error.message,
-                flags: MessageFlags.Ephemeral
+                fetchReply: true
             });
+            setTimeout(() => reply.delete().catch(() => {}), 10000);
         }
     }
 };

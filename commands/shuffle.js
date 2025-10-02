@@ -1,5 +1,4 @@
 // Shuffle Command - Randomize queue order
-const { MessageFlags } = require('discord.js');
 
 module.exports = {
     data: {
@@ -14,18 +13,22 @@ module.exports = {
             
             // Check if queue exists and has songs
             if (!queue || !queue.tracks || queue.tracks.length === 0) {
-                return await interaction.reply({
+                const reply = await interaction.reply({
                     content: '❌ The queue is empty!',
-                    flags: MessageFlags.Ephemeral
+                    fetchReply: true
                 });
+                setTimeout(() => reply.delete().catch(() => {}), 10000);
+                return;
             }
             
             // Need at least 2 songs to shuffle
             if (queue.tracks.length < 2) {
-                return await interaction.reply({
+                const reply = await interaction.reply({
                     content: '❌ Need at least 2 songs in queue to shuffle!',
-                    flags: MessageFlags.Ephemeral
+                    fetchReply: true
                 });
+                setTimeout(() => reply.delete().catch(() => {}), 10000);
+                return;
             }
             
             // Fisher-Yates shuffle algorithm
@@ -35,17 +38,19 @@ module.exports = {
                 [tracks[i], tracks[j]] = [tracks[j], tracks[i]];
             }
             
-            await interaction.reply({
+            const reply = await interaction.reply({
                 content: `🔀 Shuffled ${tracks.length} song(s) in the queue!`,
-                flags: MessageFlags.Ephemeral
+                fetchReply: true
             });
+            setTimeout(() => reply.delete().catch(() => {}), 10000);
             
         } catch (error) {
             console.error('Shuffle command error:', error);
-            await interaction.reply({
+            const reply = await interaction.reply({
                 content: '❌ Error: ' + error.message,
-                flags: MessageFlags.Ephemeral
+                fetchReply: true
             });
+            setTimeout(() => reply.delete().catch(() => {}), 10000);
         }
     }
 };

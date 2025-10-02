@@ -1,5 +1,4 @@
 // Stop Loop Command - Disable all loop modes
-const { MessageFlags } = require('discord.js');
 
 module.exports = {
     data: {
@@ -14,35 +13,41 @@ module.exports = {
             
             // Check if there's an active queue
             if (!queue) {
-                return await interaction.reply({
+                const reply = await interaction.reply({
                     content: '❌ No queue found!',
-                    flags: MessageFlags.Ephemeral
+                    fetchReply: true
                 });
+                setTimeout(() => reply.delete().catch(() => {}), 10000);
+                return;
             }
             
             // Check if any loop is active
             if (!queue.loop && !queue.queueLoop) {
-                return await interaction.reply({
+                const reply = await interaction.reply({
                     content: '❌ No loop is active!',
-                    flags: MessageFlags.Ephemeral
+                    fetchReply: true
                 });
+                setTimeout(() => reply.delete().catch(() => {}), 10000);
+                return;
             }
             
             // Disable all loop modes
             queue.loop = false;
             queue.queueLoop = false;
             
-            await interaction.reply({
+            const reply = await interaction.reply({
                 content: '⏹️ All loop modes disabled!',
-                flags: MessageFlags.Ephemeral
+                fetchReply: true
             });
+            setTimeout(() => reply.delete().catch(() => {}), 10000);
             
         } catch (error) {
             console.error('Stop loop command error:', error);
-            await interaction.reply({
+            const reply = await interaction.reply({
                 content: '❌ Error: ' + error.message,
-                flags: MessageFlags.Ephemeral
+                fetchReply: true
             });
+            setTimeout(() => reply.delete().catch(() => {}), 10000);
         }
     }
 };

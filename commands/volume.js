@@ -1,5 +1,5 @@
 // Volume Command - Adjust playback volume
-const { ApplicationCommandOptionType, MessageFlags } = require('discord.js');
+const { ApplicationCommandOptionType } = require('discord.js');
 
 module.exports = {
     data: {
@@ -24,18 +24,22 @@ module.exports = {
             
             // Check if bot is in voice channel
             if (!guildData || !guildData.player) {
-                return await interaction.reply({
+                const reply = await interaction.reply({
                     content: '❌ Nothing is playing!',
-                    flags: MessageFlags.Ephemeral
+                    fetchReply: true
                 });
+                setTimeout(() => reply.delete().catch(() => {}), 10000);
+                return;
             }
             
             // Check if there's a current resource
             if (!guildData.currentResource) {
-                return await interaction.reply({
+                const reply = await interaction.reply({
                     content: '❌ No audio resource available!',
-                    flags: MessageFlags.Ephemeral
+                    fetchReply: true
                 });
+                setTimeout(() => reply.delete().catch(() => {}), 10000);
+                return;
             }
             
             // Set volume (convert percentage to decimal: 100 = 1.0, 200 = 2.0)
@@ -49,17 +53,19 @@ module.exports = {
                 guildData.currentResource.volume.setVolume(volumeDecimal);
             }
             
-            await interaction.reply({
+            const reply = await interaction.reply({
                 content: `🔊 Volume set to ${volume}%`,
-                flags: MessageFlags.Ephemeral
+                fetchReply: true
             });
+            setTimeout(() => reply.delete().catch(() => {}), 10000);
             
         } catch (error) {
             console.error('Volume command error:', error);
-            await interaction.reply({
+            const reply = await interaction.reply({
                 content: '❌ Error: ' + error.message,
-                flags: MessageFlags.Ephemeral
+                fetchReply: true
             });
+            setTimeout(() => reply.delete().catch(() => {}), 10000);
         }
     }
 };

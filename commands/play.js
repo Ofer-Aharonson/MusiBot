@@ -1,5 +1,5 @@
 // Play Command - SoundCloud search with button selection
-const { ApplicationCommandOptionType, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
+const { ApplicationCommandOptionType, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { createAudioPlayer, createAudioResource, joinVoiceChannel, AudioPlayerStatus } = require('@discordjs/voice');
 const play = require('play-dl');
 
@@ -23,9 +23,9 @@ module.exports = {
             const query = interaction.options.getString('query');
             
             // Reply immediately to prevent timeout
-            await interaction.reply({ 
-                content: '🔍 Searching SoundCloud...', 
-                flags: MessageFlags.Ephemeral
+            const reply = await interaction.reply({ 
+                content: '🔍 Searching SoundCloud...',
+                fetchReply: true
             });
             
             // Search SoundCloud
@@ -35,10 +35,12 @@ module.exports = {
             });
             
             if (!searchResults || searchResults.length === 0) {
-                return await interaction.editReply({ 
+                await interaction.editReply({ 
                     content: '❌ No SoundCloud results found!', 
                     components: [] 
                 });
+                setTimeout(() => reply.delete().catch(() => {}), 10000);
+                return;
             }
             
             // Create buttons for top 10 results
@@ -72,6 +74,9 @@ module.exports = {
                 components: components
             });
             
+            // Auto-delete after 60 seconds (give time to select)
+            setTimeout(() => reply.delete().catch(() => {}), 60000);
+            
             // Cleanup after 15 minutes
             setTimeout(() => {
                 pendingSelections.delete(interaction.user.id);
@@ -79,10 +84,11 @@ module.exports = {
             
         } catch (error) {
             console.error('Play command error:', error);
-            await interaction.editReply({ 
+            const reply = await interaction.editReply({ 
                 content: 'Error: ' + error.message, 
                 components: [] 
             });
+            setTimeout(() => reply.delete().catch(() => {}), 10000);
         }
     },
     
@@ -94,19 +100,23 @@ module.exports = {
             
             // Verify user owns this search
             if (interaction.user.id !== userId) {
-                return await interaction.reply({
+                const reply = await interaction.reply({
                     content: '❌ Not your search!',
-                    flags: MessageFlags.Ephemeral
+                    fetchReply: true
                 });
+                setTimeout(() => reply.delete().catch(() => {}), 10000);
+                return;
             }
             
             // Get selection
             const selection = pendingSelections.get(userId);
             if (!selection) {
-                return await interaction.reply({
+                const reply = await interaction.reply({
                     content: '❌ Search expired!',
-                    flags: MessageFlags.Ephemeral
+                    fetchReply: true
                 });
+                setTimeout(() => reply.delete().catch(() => {}), 10000);
+                return;
             }
             
             const track = selection.tracks[index];
@@ -115,10 +125,12 @@ module.exports = {
             // Get voice channel
             const member = await interaction.guild.members.fetch(userId);
             if (!member.voice.channel) {
-                return await interaction.followUp({
+                const reply = await interaction.followUp({
                     content: '❌ Join a voice channel first!',
-                    flags: MessageFlags.Ephemeral
+                    fetchReply: true
                 });
+                setTimeout(() => reply.delete().catch(() => {}), 10000);
+                return;
             }
             
             const logTitle = track.title || track.name || 'Unknown Track';
@@ -205,10 +217,11 @@ module.exports = {
                 // Add to queue
                 queue.tracks.push(track);
                 const displayTitle = track.title || track.name || 'Unknown Track';
-                await interaction.editReply({
+                const reply = await interaction.editReply({
                     content: `➕ Added to queue (Position ${queue.tracks.length}): **${displayTitle}**`,
                     components: []
                 });
+                setTimeout(() => reply.delete().catch(() => {}), 10000);
             } else {
                 // Play immediately
                 queue.currentTrack = track;
@@ -222,20 +235,22 @@ module.exports = {
                 guildData.player.play(resource);
                 
                 const displayTitle = track.title || track.name || 'Unknown Track';
-                await interaction.editReply({
+                const reply = await interaction.editReply({
                     content: '▶️ Now playing: **' + displayTitle + '**',
                     components: []
                 });
+                setTimeout(() => reply.delete().catch(() => {}), 10000);
             }
             
             pendingSelections.delete(userId);
             
         } catch (error) {
             console.error('Button interaction error:', error);
-            await interaction.followUp({
+            const reply = await interaction.followUp({
                 content: 'Error: ' + error.message,
-                flags: MessageFlags.Ephemeral
+                fetchReply: true
             });
+            setTimeout(() => reply.delete().catch(() => {}), 10000);
         }
     }
 };

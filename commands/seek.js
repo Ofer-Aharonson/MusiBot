@@ -1,5 +1,5 @@
 // Seek Command - Jump to a specific time in the song
-const { ApplicationCommandOptionType, MessageFlags } = require('discord.js');
+const { ApplicationCommandOptionType } = require('discord.js');
 
 module.exports = {
     data: {
@@ -23,26 +23,31 @@ module.exports = {
             
             // Check if bot is in voice channel
             if (!guildData || !guildData.player) {
-                return await interaction.reply({
+                const reply = await interaction.reply({
                     content: '❌ Nothing is playing!',
-                    flags: MessageFlags.Ephemeral
+                    fetchReply: true
                 });
+                setTimeout(() => reply.delete().catch(() => {}), 10000);
+                return;
             }
             
             // Check if there's a current resource
             if (!guildData.currentResource) {
-                return await interaction.reply({
+                const reply = await interaction.reply({
                     content: '❌ No song is currently playing!',
-                    flags: MessageFlags.Ephemeral
+                    fetchReply: true
                 });
+                setTimeout(() => reply.delete().catch(() => {}), 10000);
+                return;
             }
             
             // Note: Seeking is limited in @discordjs/voice
             // We need to replay from the new position
-            await interaction.reply({
+            const reply = await interaction.reply({
                 content: `⏭️ Seeking to ${seconds}s... (Note: Seeking recreates the stream)`,
-                flags: MessageFlags.Ephemeral
+                fetchReply: true
             });
+            setTimeout(() => reply.delete().catch(() => {}), 10000);
             
             // Store the seek position for the next play
             if (guildData.currentTrack) {
@@ -54,10 +59,11 @@ module.exports = {
             
         } catch (error) {
             console.error('Seek command error:', error);
-            await interaction.reply({
+            const reply = await interaction.reply({
                 content: '❌ Error: ' + error.message,
-                flags: MessageFlags.Ephemeral
+                fetchReply: true
             });
+            setTimeout(() => reply.delete().catch(() => {}), 10000);
         }
     }
 };

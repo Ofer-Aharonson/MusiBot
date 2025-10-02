@@ -1,5 +1,4 @@
 // Skip Command - Skip to next track
-const { MessageFlags } = require('discord.js');
 
 module.exports = {
     data: {
@@ -14,26 +13,30 @@ module.exports = {
             
             // Check if bot is in voice channel
             if (!guildData || !guildData.player) {
-                return await interaction.reply({
+                const reply = await interaction.reply({
                     content: '❌ Nothing is playing!',
-                    flags: MessageFlags.Ephemeral
+                    fetchReply: true
                 });
+                setTimeout(() => reply.delete().catch(() => {}), 10000);
+                return;
             }
             
             // Skip by stopping current track
             guildData.player.stop();
             
-            await interaction.reply({
+            const reply = await interaction.reply({
                 content: '⏭️ Skipped!',
-                flags: MessageFlags.Ephemeral
+                fetchReply: true
             });
+            setTimeout(() => reply.delete().catch(() => {}), 10000);
             
         } catch (error) {
             console.error('Skip command error:', error);
-            await interaction.reply({
+            const reply = await interaction.reply({
                 content: '❌ Error: ' + error.message,
-                flags: MessageFlags.Ephemeral
+                fetchReply: true
             });
+            setTimeout(() => reply.delete().catch(() => {}), 10000);
         }
     }
 };

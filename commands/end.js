@@ -1,5 +1,4 @@
 // End Command - End the current queue
-const { MessageFlags } = require('discord.js');
 
 module.exports = {
     data: {
@@ -15,10 +14,12 @@ module.exports = {
             
             // Check if there's anything to end
             if (!queue && !guildData) {
-                return await interaction.reply({
+                const reply = await interaction.reply({
                     content: '❌ Nothing to end!',
-                    flags: MessageFlags.Ephemeral
+                    fetchReply: true
                 });
+                setTimeout(() => reply.delete().catch(() => {}), 10000);
+                return;
             }
             
             // Clear queue
@@ -42,17 +43,19 @@ module.exports = {
             client.stats.queues.delete(interaction.guild.id);
             client.stats.voiceConnections.delete(interaction.guild.id);
             
-            await interaction.reply({
+            const reply = await interaction.reply({
                 content: '⏹️ Queue ended and disconnected!',
-                flags: MessageFlags.Ephemeral
+                fetchReply: true
             });
+            setTimeout(() => reply.delete().catch(() => {}), 10000);
             
         } catch (error) {
             console.error('End command error:', error);
-            await interaction.reply({
+            const reply = await interaction.reply({
                 content: '❌ Error: ' + error.message,
-                flags: MessageFlags.Ephemeral
+                fetchReply: true
             });
+            setTimeout(() => reply.delete().catch(() => {}), 10000);
         }
     }
 };

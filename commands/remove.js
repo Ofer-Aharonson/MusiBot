@@ -1,5 +1,5 @@
 // Remove Command - Remove a song from the queue by position
-const { ApplicationCommandOptionType, MessageFlags } = require('discord.js');
+const { ApplicationCommandOptionType } = require('discord.js');
 
 module.exports = {
     data: {
@@ -23,34 +23,40 @@ module.exports = {
             
             // Check if queue exists
             if (!queue || !queue.tracks || queue.tracks.length === 0) {
-                return await interaction.reply({
+                const reply = await interaction.reply({
                     content: '❌ The queue is empty!',
-                    flags: MessageFlags.Ephemeral
+                    fetchReply: true
                 });
+                setTimeout(() => reply.delete().catch(() => {}), 10000);
+                return;
             }
             
             // Check if position is valid
             if (position > queue.tracks.length) {
-                return await interaction.reply({
+                const reply = await interaction.reply({
                     content: `❌ Invalid position! Queue has only ${queue.tracks.length} song(s).`,
-                    flags: MessageFlags.Ephemeral
+                    fetchReply: true
                 });
+                setTimeout(() => reply.delete().catch(() => {}), 10000);
+                return;
             }
             
             // Remove the song (position is 1-based, array is 0-based)
             const removed = queue.tracks.splice(position - 1, 1)[0];
             
-            await interaction.reply({
+            const reply = await interaction.reply({
                 content: `🗑️ Removed from queue: **${removed.title || 'Unknown Track'}**`,
-                flags: MessageFlags.Ephemeral
+                fetchReply: true
             });
+            setTimeout(() => reply.delete().catch(() => {}), 10000);
             
         } catch (error) {
             console.error('Remove command error:', error);
-            await interaction.reply({
+            const reply = await interaction.reply({
                 content: '❌ Error: ' + error.message,
-                flags: MessageFlags.Ephemeral
+                fetchReply: true
             });
+            setTimeout(() => reply.delete().catch(() => {}), 10000);
         }
     }
 };
