@@ -1,20 +1,46 @@
-const { RepeatMode } = require('discord-music-player');
-const { MESSAGES } = require('../config/constants');
-const { getQueueOrReply, sendTemporaryReply } = require('../utils/queueHelper');
+// Loop Command - Toggle loop for current song
+const { MessageFlags } = require('discord.js');
 
 module.exports = {
     data: {
         name: 'loop',
-        description: 'Loops current song'
+        description: 'Toggle loop for the current song'
     },
     
     async execute(interaction, client) {
-        await interaction.deferReply();
-        
-        const guildQueue = await getQueueOrReply(interaction, client);
-        if (!guildQueue) return;
-        
-        guildQueue.setRepeatMode(RepeatMode.SONG);
-        await sendTemporaryReply(interaction, MESSAGES.LOOP_SONG);
+        try {
+            // Get queue for this guild
+            const queue = client.stats.queues.get(interaction.guild.id);
+            
+            // Check if there's an active queue
+            if (!queue) {
+                return await interaction.reply({
+                    content: '❌ Nothing is playing!',
+                    flags: MessageFlags.Ephemeral
+                });
+            }
+            
+            // Toggle loop mode
+            queue.loop = !queue.loop;
+            
+            // If enabling track loop, disable queue loop
+            if (queue.loop) {
+                queue.queueLoop = false;
+            }
+            
+            await interaction.reply({
+                content: queue.loop 
+                    ? '🔂 Loop enabled for current song!' 
+                    : '➡️ Loop disabled for current song!',
+                flags: MessageFlags.Ephemeral
+            });
+            
+        } catch (error) {
+            console.error('Loop command error:', error);
+            await interaction.reply({
+                content: '❌ Error: ' + error.message,
+                flags: MessageFlags.Ephemeral
+            });
+        }
     }
 };

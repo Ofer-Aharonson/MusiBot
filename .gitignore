@@ -1,88 +1,31 @@
-# Auto detect text files and perform LF normalization
-* text=auto
-
-# ============================================
-# SENSITIVE FILES - NEVER COMMIT THESE!
-# ============================================
-# Your Discord bot credentials
-token.json
-.env
-
-# Any backup files with credentials
-token.json.bak
-.env.local
-.env.*.local
-
-# ============================================
-# DEPENDENCIES
-# ============================================
+# Dependencies
 node_modules/
-package-lock.json
 
-# ============================================
-# LOGS
-# ============================================
+# Environment variables
+.env
+token.json
+
+# Logs
 *.log
-logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-lerna-debug.log*
-.pnpm-debug.log*
 
-# ============================================
-# OS FILES
-# ============================================
+# OS files
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
-desktop.ini
-$RECYCLE.BIN/
 
-# ============================================
-# IDE & EDITORS
-# ============================================
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
 
-# ============================================
-# BUILD OUTPUTS
-# ============================================
+# Build files
 dist/
 build/
-*.tsbuildinfo
 
-# ============================================
-# RUNTIME
-# ============================================
-# PM2
-.pm2/
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage
-coverage/
-*.lcov
-.nyc_output
-
-# ============================================
-# TEMPORARY FILES
-# ============================================
-*.tmp
-*.temp
-.cache/
+# Stats and history
+stats.json
+stats.html
+history.json

@@ -34,7 +34,7 @@ module.exports = {
         LOOP_QUEUE: '**Looping entire queue!**',
         SEEKING: (seconds) => `**Seeking to:** ${seconds} seconds`,
         QUEUE_CLEARED: '**Clearing the queue!**',
-        QUEUE_SHUFFLED: "**Everybody's shuffling... the queue.**",
+        QUEUE_SHUFFLED: '**Everybody\'s shuffling... the queue.**',
         PAUSED: '**Pausing Current song!**',
         RESUMED: '**Unpausing Current song!**',
         REMOVED: (number) => `**Removing song number:** ${number} **from the list!**`,

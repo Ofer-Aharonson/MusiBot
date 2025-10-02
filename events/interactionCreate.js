@@ -1,40 +1,36 @@
-const { GuildMember } = require('discord.js');
-const { ERRORS } = require('../config/constants');
-const logger = require('../utils/logger');
+// Interaction Create Event - Handles slash commands and buttons
+const { MessageFlags } = require('discord.js');
 
 module.exports = {
     name: 'interactionCreate',
     async execute(interaction, client) {
-        // Ignore if not a command or not in a guild
-        if (!interaction.isCommand() || !interaction.guildId) return;
-        
-        // Verify user is in a voice channel
-        if (!(interaction.member instanceof GuildMember) || !interaction.member.voice.channel) {
-            return interaction.reply({ 
-                content: ERRORS.NO_VOICE_CHANNEL, 
-                ephemeral: true 
-            });
-        }
-        
-        // Get the command from the client's command collection
-        const command = client.commands.get(interaction.commandName);
-        
-        if (!command) {
-            logger.warn(`No command matching ${interaction.commandName} was found.`);
+        // Handle button clicks
+        if (interaction.isButton()) {
+            if (interaction.customId.startsWith('play_')) {
+                const playCommand = client.commands.get('play');
+                if (playCommand && playCommand.handleButtonInteraction) {
+                    return await playCommand.handleButtonInteraction(interaction, client);
+                }
+            }
             return;
         }
         
+        // Handle slash commands
+        if (!interaction.isCommand()) return;
+        
+        const command = client.commands.get(interaction.commandName);
+        if (!command) return;
+        
         try {
+            client.stats.commandsExecuted++;
             await command.execute(interaction, client);
         } catch (error) {
-            logger.error(`Error executing ${interaction.commandName}:`, error);
-            
-            const errorMessage = { content: 'There was an error executing this command!', ephemeral: true };
-            
+            console.error('Command error:', error);
+            const errorMsg = { content: 'Error!', flags: MessageFlags.Ephemeral };
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(errorMessage);
+                await interaction.followUp(errorMsg);
             } else {
-                await interaction.reply(errorMessage);
+                await interaction.reply(errorMsg);
             }
         }
     }

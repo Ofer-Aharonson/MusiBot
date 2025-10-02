@@ -5,10 +5,9 @@ const logger = require('../utils/logger');
 
 /**
  * Loads all command files from the commands directory
- * @param {Object} client - Discord client instance
  * @returns {Map} Map of command names to command modules
  */
-function loadCommands(client) {
+function loadCommands() {
     const commands = new Map();
     const commandsPath = path.join(__dirname, '../commands');
     const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));

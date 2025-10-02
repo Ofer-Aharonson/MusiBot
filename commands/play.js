@@ -1,81 +1,241 @@
-const { ApplicationCommandOptionType } = require('discord.js');
-const { ERRORS, MESSAGES } = require('../config/constants');
-const { sendTemporaryReply } = require('../utils/queueHelper');
-const logger = require('../utils/logger');
+// Play Command - SoundCloud search with button selection
+const { ApplicationCommandOptionType, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
+const { createAudioPlayer, createAudioResource, joinVoiceChannel, AudioPlayerStatus } = require('@discordjs/voice');
+const play = require('play-dl');
+
+// Store pending song selections (userId -> search results)
+const pendingSelections = new Map();
 
 module.exports = {
     data: {
         name: 'play',
-        description: 'Plays a song from YouTube',
-        options: [
-            {
-                name: 'query',
-                type: ApplicationCommandOptionType.String,
-                description: 'The song you want to play',
-                required: true
-            }
-        ]
+        description: 'Search and play music from SoundCloud',
+        options: [{
+            name: 'query',
+            type: ApplicationCommandOptionType.String,
+            description: 'Song name or artist',
+            required: true
+        }]
     },
     
     async execute(interaction, client) {
-        await interaction.deferReply();
-        
         try {
-            // Create or get existing queue for this guild
-            const queue = client.player.createQueue(interaction.guild);
-            const guildQueue = client.player.getQueue(interaction.guild);
+            const query = interaction.options.getString('query');
             
-            // Join the user's voice channel
-            await queue.join(interaction.member.voice.channel);
+            // Reply immediately to prevent timeout
+            await interaction.reply({ 
+                content: '🔍 Searching SoundCloud...', 
+                flags: MessageFlags.Ephemeral
+            });
             
-            // Get the song/playlist URL or search query from user input
-            const query = interaction.options.get('query').value;
+            // Search SoundCloud
+            const searchResults = await play.search(query, {
+                source: { soundcloud: 'tracks' },
+                limit: 10
+            });
             
-            // Check if user is requesting a playlist
-            if (query.includes('playlist')) {
-                const song = await this.handlePlaylist(queue, guildQueue, query, interaction);
-                if (!song) return;
-                
-                await sendTemporaryReply(interaction, MESSAGES.PLAYING_PLAYLIST(song.url));
-            } else {
-                const song = await this.handleSong(queue, guildQueue, query, interaction);
-                if (!song) return;
-                
-                await sendTemporaryReply(interaction, MESSAGES.PLAYING_SONG(song.url));
+            if (!searchResults || searchResults.length === 0) {
+                return await interaction.editReply({ 
+                    content: '❌ No SoundCloud results found!', 
+                    components: [] 
+                });
             }
+            
+            // Create buttons for top 10 results
+            const row1 = new ActionRowBuilder();
+            const row2 = new ActionRowBuilder();
+            
+            searchResults.slice(0, 10).forEach((track, index) => {
+                const title = track.title || track.name || 'Unknown Track';
+                const button = new ButtonBuilder()
+                    .setCustomId('play_' + interaction.user.id + '_' + index)
+                    .setLabel((index + 1) + '. ' + title.substring(0, 40))
+                    .setStyle(ButtonStyle.Primary);
+                
+                if (index < 5) {
+                    row1.addComponents(button);
+                } else {
+                    row2.addComponents(button);
+                }
+            });
+            
+            // Store search results
+            pendingSelections.set(interaction.user.id, {
+                tracks: searchResults.slice(0, 10),
+                timestamp: Date.now()
+            });
+            
+            // Show selection menu
+            const components = row2.components.length > 0 ? [row1, row2] : [row1];
+            await interaction.editReply({
+                content: '🎵 **Pick a SoundCloud track:**',
+                components: components
+            });
+            
+            // Cleanup after 15 minutes
+            setTimeout(() => {
+                pendingSelections.delete(interaction.user.id);
+            }, 900000);
+            
         } catch (error) {
-            logger.error('Error in play command:', error);
-            await sendTemporaryReply(interaction, `**Error:** ${error.message}`);
+            console.error('Play command error:', error);
+            await interaction.editReply({ 
+                content: 'Error: ' + error.message, 
+                components: [] 
+            });
         }
     },
     
-    async handlePlaylist(queue, guildQueue, query, interaction) {
-        const song = await queue.playlist(query).catch(err => {
-            logger.error('Playlist load error:', err);
-            if (!guildQueue) queue.stop();
-            return null;
-        });
-        
-        if (!song) {
-            await sendTemporaryReply(interaction, ERRORS.PLAYLIST_LOAD_FAILED);
-            return null;
+    async handleButtonInteraction(interaction, client) {
+        try {
+            const parts = interaction.customId.split('_');
+            const userId = parts[1];
+            const index = parseInt(parts[2]);
+            
+            // Verify user owns this search
+            if (interaction.user.id !== userId) {
+                return await interaction.reply({
+                    content: '❌ Not your search!',
+                    flags: MessageFlags.Ephemeral
+                });
+            }
+            
+            // Get selection
+            const selection = pendingSelections.get(userId);
+            if (!selection) {
+                return await interaction.reply({
+                    content: '❌ Search expired!',
+                    flags: MessageFlags.Ephemeral
+                });
+            }
+            
+            const track = selection.tracks[index];
+            await interaction.deferUpdate();
+            
+            // Get voice channel
+            const member = await interaction.guild.members.fetch(userId);
+            if (!member.voice.channel) {
+                return await interaction.followUp({
+                    content: '❌ Join a voice channel first!',
+                    flags: MessageFlags.Ephemeral
+                });
+            }
+            
+            const logTitle = track.title || track.name || 'Unknown Track';
+            console.log('Playing: ' + logTitle + ' (' + track.url + ')');
+            
+            // Get or create queue
+            let queue = client.stats.queues.get(interaction.guild.id);
+            if (!queue) {
+                queue = {
+                    tracks: [],
+                    loop: false,
+                    queueLoop: false,
+                    currentTrack: null
+                };
+                client.stats.queues.set(interaction.guild.id, queue);
+            }
+            
+            // Get or create voice connection
+            let guildData = client.stats.voiceConnections.get(interaction.guild.id);
+            
+            if (!guildData) {
+                // Create connection
+                const connection = joinVoiceChannel({
+                    channelId: member.voice.channel.id,
+                    guildId: interaction.guild.id,
+                    adapterCreator: interaction.guild.voiceAdapterCreator,
+                });
+                
+                const player = createAudioPlayer();
+                connection.subscribe(player);
+                
+                guildData = {
+                    connection,
+                    player,
+                    guildName: interaction.guild.name,
+                    channelName: member.voice.channel.name,
+                    connectedAt: Date.now(),
+                    volume: 1.0
+                };
+                
+                client.stats.voiceConnections.set(interaction.guild.id, guildData);
+                
+                // Handle track finished - play next in queue
+                player.on(AudioPlayerStatus.Idle, async () => {
+                    console.log('Track finished');
+                    const q = client.stats.queues.get(interaction.guild.id);
+                    if (!q) return;
+                    
+                    // Handle loop modes
+                    if (q.loop && q.currentTrack) {
+                        // Replay current track
+                        const stream = await play.stream(q.currentTrack.url);
+                        const resource = createAudioResource(stream.stream, {
+                            inputType: stream.type
+                        });
+                        guildData.player.play(resource);
+                        return;
+                    }
+                    
+                    // Play next track
+                    if (q.tracks.length > 0) {
+                        const nextTrack = q.tracks.shift();
+                        q.currentTrack = nextTrack;
+                        
+                        // If queue loop, add current track back to end
+                        if (q.queueLoop) {
+                            q.tracks.push(nextTrack);
+                        }
+                        
+                        const stream = await play.stream(nextTrack.url);
+                        const resource = createAudioResource(stream.stream, {
+                            inputType: stream.type
+                        });
+                        guildData.player.play(resource);
+                        console.log('Playing next: ' + (nextTrack.title || 'Unknown'));
+                    }
+                });
+            }
+            
+            // Check if currently playing
+            const isPlaying = guildData.player.state.status === AudioPlayerStatus.Playing;
+            
+            if (isPlaying) {
+                // Add to queue
+                queue.tracks.push(track);
+                const displayTitle = track.title || track.name || 'Unknown Track';
+                await interaction.editReply({
+                    content: `➕ Added to queue (Position ${queue.tracks.length}): **${displayTitle}**`,
+                    components: []
+                });
+            } else {
+                // Play immediately
+                queue.currentTrack = track;
+                const stream = await play.stream(track.url);
+                const resource = createAudioResource(stream.stream, {
+                    inputType: stream.type
+                });
+                
+                guildData.currentResource = resource;
+                guildData.currentTrack = track;
+                guildData.player.play(resource);
+                
+                const displayTitle = track.title || track.name || 'Unknown Track';
+                await interaction.editReply({
+                    content: '▶️ Now playing: **' + displayTitle + '**',
+                    components: []
+                });
+            }
+            
+            pendingSelections.delete(userId);
+            
+        } catch (error) {
+            console.error('Button interaction error:', error);
+            await interaction.followUp({
+                content: 'Error: ' + error.message,
+                flags: MessageFlags.Ephemeral
+            });
         }
-        
-        return song;
-    },
-    
-    async handleSong(queue, guildQueue, query, interaction) {
-        const song = await queue.play(query).catch(err => {
-            logger.error('Song load error:', err);
-            if (!guildQueue) queue.stop();
-            return null;
-        });
-        
-        if (!song) {
-            await sendTemporaryReply(interaction, ERRORS.SONG_LOAD_FAILED);
-            return null;
-        }
-        
-        return song;
     }
 };

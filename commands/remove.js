@@ -1,36 +1,56 @@
-const { ApplicationCommandOptionType } = require('discord.js');
-const { ERRORS, MESSAGES } = require('../config/constants');
-const { getQueueOrReply, sendTemporaryReply } = require('../utils/queueHelper');
+// Remove Command - Remove a song from the queue by position
+const { ApplicationCommandOptionType, MessageFlags } = require('discord.js');
 
 module.exports = {
     data: {
         name: 'remove',
-        description: 'Removes a song from the queue',
-        options: [
-            {
-                name: 'number',
-                type: ApplicationCommandOptionType.Integer,
-                description: 'Remove specific song number from queue',
-                required: true
-            }
-        ]
+        description: 'Remove a song from the queue',
+        options: [{
+            name: 'position',
+            type: ApplicationCommandOptionType.Integer,
+            description: 'Position in queue to remove (1 = first song)',
+            required: true,
+            minValue: 1
+        }]
     },
     
     async execute(interaction, client) {
-        await interaction.deferReply();
-        
-        const guildQueue = await getQueueOrReply(interaction, client);
-        if (!guildQueue) return;
-        
-        const songNumber = interaction.options.get('number').value;
-        
-        // Validate song number exists in queue
-        if (songNumber < 0 || songNumber >= guildQueue.songs.length) {
-            await sendTemporaryReply(interaction, ERRORS.INVALID_SONG_NUMBER(guildQueue.songs.length));
-            return;
+        try {
+            const position = interaction.options.getInteger('position');
+            
+            // Get queue for this guild
+            const queue = client.stats.queues.get(interaction.guild.id);
+            
+            // Check if queue exists
+            if (!queue || !queue.tracks || queue.tracks.length === 0) {
+                return await interaction.reply({
+                    content: '❌ The queue is empty!',
+                    flags: MessageFlags.Ephemeral
+                });
+            }
+            
+            // Check if position is valid
+            if (position > queue.tracks.length) {
+                return await interaction.reply({
+                    content: `❌ Invalid position! Queue has only ${queue.tracks.length} song(s).`,
+                    flags: MessageFlags.Ephemeral
+                });
+            }
+            
+            // Remove the song (position is 1-based, array is 0-based)
+            const removed = queue.tracks.splice(position - 1, 1)[0];
+            
+            await interaction.reply({
+                content: `🗑️ Removed from queue: **${removed.title || 'Unknown Track'}**`,
+                flags: MessageFlags.Ephemeral
+            });
+            
+        } catch (error) {
+            console.error('Remove command error:', error);
+            await interaction.reply({
+                content: '❌ Error: ' + error.message,
+                flags: MessageFlags.Ephemeral
+            });
         }
-        
-        guildQueue.remove(songNumber);
-        await sendTemporaryReply(interaction, MESSAGES.REMOVED(songNumber));
     }
 };
