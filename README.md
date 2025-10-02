@@ -44,6 +44,14 @@ A powerful Discord music bot with **SoundCloud** integration, featuring queue ma
 - **Active Connections** - See current voice connections
 - **Auto-refresh** - Updates every 5 seconds
 
+### 🛡️ Auto-Restart Watchdog (Windows)
+- **24/7 Operation** - Keeps bot running continuously
+- **Crash Recovery** - Auto-restarts bot within seconds if it crashes
+- **Port Cleanup** - Automatically clears stuck ports
+- **Smart Limits** - Prevents infinite restart loops (max 10/hour)
+- **Detailed Logging** - Track all restarts and errors
+- **Boot Integration** - Start automatically with Windows via Task Scheduler
+
 ## 📋 Commands
 
 ### Playback Commands
@@ -129,6 +137,18 @@ A powerful Discord music bot with **SoundCloud** integration, featuring queue ma
    ```bash
    node index.js
    ```
+
+7. **Optional: Setup Auto-Restart Watchdog** (Windows only)
+   
+   For 24/7 operation with automatic crash recovery:
+   ```bash
+   # Test the watchdog
+   powershell -ExecutionPolicy Bypass -File .\Watchdog-MusiBot.ps1
+   
+   # Or double-click Start-Watchdog.bat
+   ```
+   
+   See [WATCHDOG.md](WATCHDOG.md) for complete setup instructions including Task Scheduler configuration.
 
 ## 📊 Web Dashboard
 
